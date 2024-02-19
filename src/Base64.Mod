@@ -26,12 +26,13 @@ END fix;
 
 PROCEDURE EncodeString*(src: ARRAY OF CHAR; VAR dst: ARRAY OF CHAR);
 VAR
-  i, j, k, srcLength: LONGINT;
+  i, j, k, srcLength, dstLen: LONGINT;
   block: ARRAY 3 OF LONGINT;
   enc: ARRAY 4 OF LONGINT;
   pad: LONGINT;
 BEGIN
   IF fixToIncludeEOL THEN fix(src) END;
+  dstLen := LEN(dst);
   j := 0; (* Index for dst string *)
   i := 0; (* Index for src string *)
   srcLength := Strings.Length(src); (* Use the total allocated length of src *)
@@ -61,17 +62,21 @@ BEGIN
 
     (* Write the encoded characters *)
     FOR k := 0 TO 3 DO
-      IF k >= 4 - pad THEN
-        dst[j+k] := "=";
+      IF j+k < dstLen THEN
+        IF k >= 4 - pad THEN
+          dst[j+k] := "=";
+        ELSE
+          dst[j+k] := GetEncodingChar(enc[k]);
+        END;
       ELSE
-        dst[j+k] := GetEncodingChar(enc[k]);
+        Out.String("destination capacity is not enough to fit base64 encoded string"); Out.Ln;
+        HALT(5);
       END;
     END;
 
     INC(i, 3);
     INC(j, 4);
   END;
-
   dst[j] := 0X; (* Null-terminate the dst string *)
 END EncodeString;
 
