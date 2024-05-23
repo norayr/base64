@@ -80,6 +80,69 @@ BEGIN
   dst[j] := 0X; (* Null-terminate the dst string *)
 END EncodeString;
 
+PROCEDURE GetDecodingChar(ch: CHAR): LONGINT;
+VAR
+  i: LONGINT;
+BEGIN
+  FOR i := 0 TO LEN(EncodingTable)-1 DO
+    IF EncodingTable[i] = ch THEN
+      RETURN i;
+    END;
+  END;
+  Out.String("Invalid character in Base64 encoded string"); Out.Ln;
+  HALT(5);
+END GetDecodingChar;
+
+(* Decodes the input string from Base64 format and returns the result via a VAR parameter. *)
+PROCEDURE DecodeString*(src: ARRAY OF CHAR; VAR dst: ARRAY OF CHAR);
+VAR
+  i, j, k, srcLength, dstLen: LONGINT;
+  block: ARRAY 4 OF LONGINT;
+  dec: ARRAY 3 OF LONGINT;
+  pad: LONGINT;
+  (* Determine the number of padding characters *)
+BEGIN
+  IF fixToIncludeEOL THEN fix(src) END;
+  dstLen := LEN(dst);
+  j := 0; (* Index for dst string *)
+  i := 0; (* Index for src string *)
+  srcLength := Strings.Length(src); (* Use the total allocated length of src *)
+  
+  IF i+4 > srcLength THEN
+    pad := 4 - (srcLength - i)
+  ELSE
+    pad := 0;
+  END;
+  (* Convert the 4 encoded Base64 characters into 3 bytes *)
+  FOR k := 0 TO 3 DO
+    IF j+k < dstLen THEN
+      IF k >= 4 - pad THEN
+        block[k] := 0;
+      ELSE
+        block[k] := GetDecodingChar(src[j+k]);
+      END;
+    ELSE
+      Out.String("destination capacity is not enough to fit decoded string"); Out.Ln;
+      HALT(5);
+    END;
+  END;
+  (* Convert the 3 bytes into 4 decoded characters *)
+  dec[0] := (block[0] * 4) + (block[1] DIV 16);
+  dec[1] := ((block[1] MOD 16) * 16) + (block[2] DIV 4);
+  dec[2] := ((block[2] MOD 4) * 64) + block[3];
+  (* Write the decoded characters *)
+  FOR k := 0 TO 2 DO
+    IF i+k < dstLen THEN
+      dst[i+k] := CHR(dec[k]);
+    ELSE
+      Out.String("destination capacity is not enough to fit decoded string"); Out.Ln;
+      HALT(5);
+    END;
+  END;
+  INC(i, 4);
+  INC(j, 3);
+END DecodeString;
+
 BEGIN
   fixToIncludeEOL := TRUE;
   COPY("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", EncodingTable);
