@@ -94,54 +94,49 @@ BEGIN
 END GetDecodingChar;
 
 (* Decodes the input string from Base64 format and returns the result via a VAR parameter. *)
+
 PROCEDURE DecodeString*(src: ARRAY OF CHAR; VAR dst: ARRAY OF CHAR);
 VAR
   i, j, k, srcLength, dstLen: LONGINT;
   block: ARRAY 4 OF LONGINT;
   dec: ARRAY 3 OF LONGINT;
-  pad: LONGINT;
-  (* Determine the number of padding characters *)
 BEGIN
-  IF fixToIncludeEOL THEN fix(src) END;
   dstLen := LEN(dst);
-  j := 0; (* Index for dst string *)
-  i := 0; (* Index for src string *)
-  srcLength := Strings.Length(src); (* Use the total allocated length of src *)
-  
-  IF i+4 > srcLength THEN
-    pad := 4 - (srcLength - i)
-  ELSE
-    pad := 0;
-  END;
-  (* Convert the 4 encoded Base64 characters into 3 bytes *)
-  FOR k := 0 TO 3 DO
-    IF j+k < dstLen THEN
-      IF k >= 4 - pad THEN
-        block[k] := 0;
-      ELSE
-        block[k] := GetDecodingChar(src[j+k]);
+  j := 0; (* index for dst string *)
+  i := 0; (* index for src string *)
+  srcLength := Strings.Length(src);
+
+  WHILE i < srcLength DO
+    (* initialize block *)
+    FOR k := 0 TO 3 DO
+      block[k] := 0;
+    END;
+
+    (* convert base64 characters to indices *)
+    k := 0;
+    WHILE (k < 4) & (i+k < srcLength) & (src[i+k] # '=') DO
+      block[k] := GetDecodingChar(src[i+k]);
+      INC(k);
+    END;
+
+    (* convert indices to original bytes *)
+    dec[0] := (block[0] * 4) + (block[1] DIV 16);
+    dec[1] := ((block[1] MOD 16) * 16) + (block[2] DIV 4);
+    dec[2] := ((block[2] MOD 4) * 64) + block[3];
+
+    (* write the decoded bytes, adjusting for any padding *)
+    FOR k := 0 TO 2 DO
+      IF (j < dstLen) & (i + k*4/3 < srcLength - k) THEN
+        dst[j] := CHR(dec[k]);
+        INC(j);
       END;
-    ELSE
-      Out.String("destination capacity is not enough to fit decoded string"); Out.Ln;
-      HALT(5);
     END;
+
+    INC(i, 4);
   END;
-  (* Convert the 3 bytes into 4 decoded characters *)
-  dec[0] := (block[0] * 4) + (block[1] DIV 16);
-  dec[1] := ((block[1] MOD 16) * 16) + (block[2] DIV 4);
-  dec[2] := ((block[2] MOD 4) * 64) + block[3];
-  (* Write the decoded characters *)
-  FOR k := 0 TO 2 DO
-    IF i+k < dstLen THEN
-      dst[i+k] := CHR(dec[k]);
-    ELSE
-      Out.String("destination capacity is not enough to fit decoded string"); Out.Ln;
-      HALT(5);
-    END;
-  END;
-  INC(i, 4);
-  INC(j, 3);
+  dst[j] := 0X;
 END DecodeString;
+
 
 BEGIN
   fixToIncludeEOL := TRUE;
