@@ -1,5 +1,5 @@
 DEPEND =
-VOC = /opt/voc/bin/voc
+VOC = voc
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 mkfile_dir_path := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 ifndef BUILD
