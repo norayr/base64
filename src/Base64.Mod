@@ -1,5 +1,5 @@
 MODULE Base64;
- IMPORT Out, Strings;
+ IMPORT Out, Strings;  (* polpo: Out := out, Strings := strings *)
 VAR
   EncodingTable : ARRAY 64 OF CHAR;
   fixToIncludeEOL*: BOOLEAN;
@@ -39,12 +39,14 @@ BEGIN
 
   WHILE i < srcLength DO
     (* Fill the block with up to three bytes of input *)
-    FOR k := 0 TO 2 DO
+    k := 0;
+    WHILE k <= 2 DO
       IF i+k < srcLength THEN
         block[k] := ORD(src[i+k])
       ELSE
         block[k] := 0;
       END;
+      INC(k)
     END;
 
     (* Convert the 3 bytes into 4 encoded Base64 characters *)
@@ -61,7 +63,8 @@ BEGIN
     END;
 
     (* Write the encoded characters *)
-    FOR k := 0 TO 3 DO
+    k := 0;
+    WHILE k <= 3 DO
       IF j+k < dstLen THEN
         IF k >= 4 - pad THEN
           dst[j+k] := "=";
@@ -70,8 +73,9 @@ BEGIN
         END;
       ELSE
         Out.String("destination capacity is not enough to fit base64 encoded string"); Out.Ln;
-        HALT(5);
+        HALT(100);
       END;
+      INC(k)
     END;
 
     INC(i, 3);
@@ -84,13 +88,15 @@ PROCEDURE GetDecodingChar(ch: CHAR): LONGINT;
 VAR
   i: LONGINT;
 BEGIN
-  FOR i := 0 TO LEN(EncodingTable)-1 DO
+  i := 0;
+  WHILE i <= LEN(EncodingTable)-1 DO
     IF EncodingTable[i] = ch THEN
       RETURN i;
     END;
+    INC(i)
   END;
   Out.String("Invalid character in Base64 encoded string"); Out.Ln;
-  HALT(5);
+  HALT(100);
 END GetDecodingChar;
 
 (* Decodes the input string from Base64 format and returns the result via a VAR parameter. *)
@@ -108,8 +114,10 @@ BEGIN
 
   WHILE i < srcLength DO
     (* initialize block *)
-    FOR k := 0 TO 3 DO
+    k := 0;
+    WHILE k <= 3 DO
       block[k] := 0;
+      INC(k)
     END;
 
     (* convert base64 characters to indices *)
@@ -125,11 +133,13 @@ BEGIN
     dec[2] := ((block[2] MOD 4) * 64) + block[3];
 
     (* write the decoded bytes, adjusting for any padding *)
-    FOR k := 0 TO 2 DO
+    k := 0;
+    WHILE k <= 2 DO
       IF (j < dstLen) & (i + k*4/3 < srcLength - k) THEN
         dst[j] := CHR(dec[k]);
         INC(j);
       END;
+      INC(k)
     END;
 
     INC(i, 4);
