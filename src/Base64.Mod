@@ -113,6 +113,9 @@ BEGIN
   j := 0; (* index for dst string *)
   i := 0; (* index for src string *)
   srcLength := Strings.Length(src);
+  IF (dstLen = 0) OR (srcLength MOD 4 # 0) THEN
+    Out.String("invalid base64 length or empty destination"); Out.Ln; HALT(100)
+  END;
 
   WHILE i < srcLength DO
     (* initialize block *)
@@ -127,6 +130,22 @@ BEGIN
     WHILE (k < 4) & (i+k < srcLength) & (src[i+k] # '=') DO
       block[k] := GetDecodingChar(src[i+k]);
       INC(k);
+    END;
+    IF k < 4 THEN
+      IF (i + 4 # srcLength) OR (k < 2) THEN
+        Out.String("invalid base64 padding"); Out.Ln; HALT(100)
+      END;
+      n := k;
+      WHILE n < 4 DO
+        IF src[i+n] # '=' THEN
+          Out.String("invalid base64 padding"); Out.Ln; HALT(100)
+        END;
+        INC(n)
+      END;
+      IF ((k = 2) & (block[1] MOD 16 # 0)) OR
+         ((k = 3) & (block[2] MOD 4 # 0)) THEN
+        Out.String("invalid base64 padding bits"); Out.Ln; HALT(100)
+      END
     END;
 
     (* convert indices to original bytes *)
@@ -158,4 +177,3 @@ BEGIN
   COPY("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", EncodingTable);
 
 END Base64.
-
